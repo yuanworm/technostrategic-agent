@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.DS_Store
+
+# Run artifacts — keep the dir, ignore the outputs
+outputs/*.json
+outputs/*.md
+!outputs/.gitkeep
