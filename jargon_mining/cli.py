@@ -74,6 +74,10 @@ def _shared_options(fn):
         "--config", "-c", default=None,
         help="Path to thesis config JSON (default: config/thesis_stub.json)"
     )(fn)
+    fn = click.option(
+        "--vertical", "-v", default=None,
+        help="Override target_vertical from config (e.g. fintech, logistics, medtech)"
+    )(fn)
     return fn
 
 
@@ -89,7 +93,7 @@ def cli():
 
 @cli.command()
 @_shared_options
-def collect(output_dir, model, config):
+def collect(output_dir, model, config, vertical):
     """
     Stage 1: Run the three collection sub-agents (function, vertical, culture).
 
@@ -99,6 +103,8 @@ def collect(output_dir, model, config):
     Every phrase in the output must carry a source citation.
     """
     thesis = cfg.load_thesis(config)
+    if vertical:
+        thesis["target_vertical"] = vertical
     out_dir = cfg.resolve_output_dir(output_dir)
     model_ = cfg.get_model(model)
     target = f"{thesis['target_company']} × {thesis['category']} × {thesis['market']}"
@@ -168,7 +174,7 @@ def collect(output_dir, model, config):
 
 @cli.command()
 @_shared_options
-def sort(output_dir, model, config):
+def sort(output_dir, model, config, vertical):  # noqa: ARG001 (vertical unused in sort)
     """
     Stage 2: Classify collected phrases as buyer-protective / seller-protective / ambiguous.
 
@@ -226,7 +232,7 @@ def sort(output_dir, model, config):
 
 @cli.command()
 @_shared_options
-def diverge(output_dir, model, config):
+def diverge(output_dir, model, config, vertical):  # noqa: ARG001 (vertical unused in diverge)
     """
     Stage 3: Find formal↔unguarded divergences — candidate deleted realities.
 
@@ -254,8 +260,12 @@ def diverge(output_dir, model, config):
 
     sorted_data = _read_json(in_path)
 
+    # Pass collected phrases so divergence finder can surface real source citations.
+    collected_path = out_dir / cfg.COLLECTED_FILE
+    collected_data = _read_json(collected_path) if collected_path.exists() else None
+
     console.print("\n[bold cyan]Running Divergence Finder...[/bold cyan]")
-    divergence_md = run_divergence_finder(sorted_data, thesis, model_, web_search)
+    divergence_md = run_divergence_finder(sorted_data, thesis, model_, web_search, collected_data)
 
     header = (
         f"# Candidate Deleted Realities\n\n"
@@ -292,7 +302,7 @@ def diverge(output_dir, model, config):
 
 @cli.command("run-all")
 @_shared_options
-def run_all(output_dir, model, config):
+def run_all(output_dir, model, config, vertical):
     """
     Run all three stages sequentially with human confirmation between each.
 
@@ -311,7 +321,7 @@ def run_all(output_dir, model, config):
 
     ctx = click.get_current_context()
 
-    ctx.invoke(collect, output_dir=output_dir, model=model, config=config)
+    ctx.invoke(collect, output_dir=output_dir, model=model, config=config, vertical=vertical)
 
     console.print("\n")
     if not click.confirm(
@@ -321,7 +331,7 @@ def run_all(output_dir, model, config):
         console.print("Stopped after collect. Run `sort` manually when ready.")
         return
 
-    ctx.invoke(sort, output_dir=output_dir, model=model, config=config)
+    ctx.invoke(sort, output_dir=output_dir, model=model, config=config, vertical=vertical)
 
     console.print("\n")
     if not click.confirm(
@@ -331,4 +341,4 @@ def run_all(output_dir, model, config):
         console.print("Stopped after sort. Run `diverge` manually when ready.")
         return
 
-    ctx.invoke(diverge, output_dir=output_dir, model=model, config=config)
+    ctx.invoke(diverge, output_dir=output_dir, model=model, config=config, vertical=vertical)

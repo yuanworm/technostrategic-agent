@@ -33,5 +33,7 @@
     "If deliverability/OTP reliability is a commodity concern and buyers actually care more about cost arbitrage or developer experience, the deleted reality is different",
     "If the real gating factor is not deliverability but regulatory/data-residency compliance, the ICP and pain map shifts to compliance/legal"
   ],
+  "target_vertical": "fintech",
+  "vertical_description": "Digital banks, payment companies, lending platforms, and insurance tech companies operating across SEA. These companies rely heavily on customer communications for core product flows: OTP for login and transactions, fraud alerts, account balance notifications, KYC verification steps, loan disbursement confirmations. Regulatory requirements (MAS, OJK, BSP) often mandate specific notification formats and audit trails. A failed OTP or missed fraud alert is not a UX inconvenience — it is a compliance event or a direct revenue loss.",
   "lead_a_status": "STUBBED — human-supplied for v1. Build Sense-Maker agent in v2 (see TODO in cli.py)."
 }

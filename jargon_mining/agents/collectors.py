@@ -47,30 +47,35 @@ Do not fabricate phrases — if you cannot find a source, do not include the phr
 _VERTICAL_SYSTEM = """\
 You are a research sub-agent. Do NOT analyze, sort, or interpret. Collect only.
 
-VERTICAL: CPaaS / communications-platform-as-a-service, and its immediate buyers
-(companies sending high-volume customer communications — OTP, alerts, notifications —
-across multiple SEA markets).
+You are collecting language from the perspective of companies IN a specific buyer industry
+that PURCHASE CPaaS/messaging infrastructure — NOT from CPaaS vendors themselves. You will
+be told the target vertical (e.g. fintech, logistics, medtech). Collect how companies IN
+that vertical describe their communications needs and pain — in their own words.
 
 Collect language in TWO registers, kept separate:
 
-FORMAL REGISTER (the industry's defensible, on-record language):
-- Pull from: annual-report and 10-K RISK-FACTOR sections of public CPaaS companies
-  (e.g. Twilio, Sinch, Bandwidth) AND of heavy CPaaS *buyers* (regional logistics, fintech,
-  e-commerce); industry analyst report summaries (Gartner/IDC on CPaaS); regulatory filings
-  touching messaging, data, telecom.
-- Output: recurring risk language, category terms, compliance phrases. Verbatim.
+FORMAL REGISTER (how companies in this vertical describe their communications needs publicly):
+- Pull from: annual reports and investor filings of companies in this vertical that mention
+  customer communications, notifications, OTP, or messaging infrastructure; industry body
+  and regulator guidance specifically requiring notification/messaging (e.g. central bank
+  rules on transaction alerts, health authority rules on patient comms); conference talks
+  and case studies by companies in this vertical about their communications stack.
+- Output: recurring phrases, compliance requirements, capability language. Verbatim, cited.
 
-UNGUARDED REGISTER (the visceral version):
-- Pull from: trade press and practitioner blogs on CPaaS delivery problems, deliverability,
-  carrier filtering, OTP failure, spam classification, multi-market routing pain.
-- Output: phrases describing what actually goes wrong and what people fear. Verbatim.
+UNGUARDED REGISTER (how practitioners at these companies actually talk about comms pain):
+- Pull from: engineering blogs and post-mortems written by engineers at companies in this
+  vertical describing OTP failures, notification outages, fraud via messaging, or
+  infrastructure problems; Reddit / Hacker News / practitioner forums where engineers from
+  this vertical describe comms-related frustrations; job postings that reveal operational
+  pain through the problems they ask candidates to solve.
+- Output: phrases describing what actually breaks, what people fear, what costs them money
+  or compliance standing. Verbatim, cited.
 
-For every phrase, cite source type. Two columns: FORMAL | UNGUARDED.
+For every phrase, cite the source type and company/publication name where possible.
+Do NOT fabricate phrases — if you cannot find a real source, do not include the phrase.
 
-Use the web_search tool extensively. Search for CPaaS annual reports (Twilio 10-K, Sinch
-annual report), Gartner CPaaS magic quadrant summaries, OTP delivery failure blog posts,
-carrier filtering complaints, deliverability issues across SEA markets (Indonesia, Thailand,
-Philippines, Vietnam, Malaysia, Singapore). Do not fabricate phrases — cite real sources.
+Use the web_search tool extensively across different search angles. Do not restrict to
+CPaaS vendors' marketing — search for the buyer's industry perspective.
 """
 
 _CULTURE_SYSTEM = """\
@@ -139,20 +144,24 @@ def run_vertical_collector(
     model: str,
     search_fn: Callable[[str, int], List[Dict]],
 ) -> str:
-    company = thesis["target_company"]
-    category = thesis["category"]
-    competitors = ", ".join(thesis["competitor_frame"][:4])
+    vertical = thesis.get("target_vertical", "fintech")
+    vertical_desc = thesis.get(
+        "vertical_description",
+        f"Companies in the {vertical} industry that send high-volume customer communications.",
+    )
+    market = thesis["market"]
+    use_cases = ", ".join(thesis["icp"]["use_cases"])
 
     user_message = (
-        f"Target account context:\n"
-        f"- Company under analysis: {company} ({category})\n"
-        f"- Key CPaaS competitors for reference: {competitors}\n"
-        f"- Market: {thesis['market']}\n"
-        f"- Use cases: {', '.join(thesis['icp']['use_cases'])}\n\n"
-        "Search for CPaaS industry language from the source types in your instructions. "
-        "Prioritise annual report risk-factor language, analyst summaries, and "
-        "practitioner accounts of real delivery failures. Aim for at least 20 phrases "
-        "per register. Every phrase must carry a source citation."
+        f"Target vertical: {vertical.upper()}\n\n"
+        f"Vertical description: {vertical_desc}\n\n"
+        f"Market context: {market}\n"
+        f"Key communications use cases in this vertical: {use_cases}\n\n"
+        f"Research extensively how {vertical} companies describe their communications needs "
+        f"and pain — in their OWN words, from their OWN perspective as buyers. "
+        f"Search annual reports, regulator filings, engineering blogs, and practitioner "
+        f"forums from the {vertical} industry. Do NOT collect from CPaaS vendors' marketing. "
+        "Aim for at least 20 phrases per register. Every phrase must carry a source citation."
     )
 
     return run_agent(_VERTICAL_SYSTEM, user_message, model, search_fn)

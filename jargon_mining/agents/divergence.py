@@ -7,7 +7,7 @@ for disagreeing with the thesis. The system STOPS here — it does not pick the 
 That is the human's call (Step 4 in the prompt set).
 """
 
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Optional
 from jargon_mining.agents.base import run_agent
 
 _DIVERGENCE_SYSTEM = """\
@@ -20,8 +20,8 @@ still feels.
 
 For each candidate, output:
   THEME: (one line)
-  FORMAL PHRASE: (the polished/defensible version)
-  UNGUARDED PHRASE: (the visceral version)
+  FORMAL PHRASE: (the polished/defensible version) — SOURCE: (publication/source type, verbatim from the collected data)
+  UNGUARDED PHRASE: (the visceral version) — SOURCE: (publication/source type, verbatim from the collected data)
   THE DELETED REALITY (hypothesis): what does the formal phrase erase that the person
     still feels? State as a HYPOTHESIS, not a fact.
 
@@ -37,10 +37,12 @@ Format each entry as:
 
 ---
 **THEME:** <one-line theme>
-**FORMAL PHRASE:** "<phrase>" *(source type)*
-**UNGUARDED PHRASE:** "<phrase>" *(source type)*
+**FORMAL PHRASE:** "<phrase>"
+**SOURCE:** <publication name / source type from the collected data>
+**UNGUARDED PHRASE:** "<phrase>"
+**SOURCE:** <publication name / source type from the collected data>
 **THE DELETED REALITY (hypothesis):** <hypothesis>
-*Flags: [UNEXPECTED] / [HUMAN-READ] if applicable*
+*Flags: [UNEXPECTED] / [HUMAN-READ] if applicable, else "none"*
 
 ---
 
@@ -60,10 +62,29 @@ def run_divergence_finder(
     thesis: dict,
     model: str,
     search_fn: Callable[[str, int], List[Dict]],
+    collected_output: Optional[dict] = None,
 ) -> str:
     sorted_table = sorted_output.get("raw_output", "")
     thesis_summary = thesis.get("thesis", "")
     what_wrong = thesis.get("what_would_prove_this_wrong", [])
+
+    # Build a source-reference block from the original collected phrases so the
+    # divergence finder can cite real publication names rather than generic axis labels.
+    source_ref = ""
+    if collected_output:
+        parts = []
+        for axis in ("function", "vertical", "culture"):
+            raw = collected_output.get(axis, {}).get("raw_output", "")
+            if raw:
+                parts.append(f"=== SOURCE REFERENCE — {axis.upper()} AXIS ===\n{raw}")
+        if parts:
+            source_ref = (
+                "\n\nThe following is the original collected data with source citations. "
+                "Use it to find and include the real source name for each phrase you cite "
+                "in your output — do not use generic labels like 'job posting' when the "
+                "actual publication name is available.\n\n"
+                + "\n\n".join(parts)
+            )
 
     user_message = (
         "Below is the classified phrase table from the sort stage.\n\n"
@@ -74,6 +95,7 @@ def run_divergence_finder(
         + "\n\n"
         "=== SORTED PHRASE TABLE ===\n"
         f"{sorted_table}\n"
+        f"{source_ref}"
     )
 
     return run_agent(_DIVERGENCE_SYSTEM, user_message, model, search_fn)
