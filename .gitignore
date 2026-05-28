@@ -6,7 +6,6 @@ venv/
 .env
 .DS_Store
 
-# Run artifacts — keep the dir, ignore the outputs
-outputs/*.json
-outputs/*.md
+# Run artifacts — keep the top-level dir, ignore everything in it
+outputs/**
 !outputs/.gitkeep
