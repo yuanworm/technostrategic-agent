@@ -1,34 +1,19 @@
-import os
-import requests
+"""
+Web search backend.
+
+The agents use Anthropic's server-side `web_search_20250305` tool, so live web
+search is handled by Anthropic with the same ANTHROPIC_API_KEY — no separate
+search-provider key is required.
+
+This module is kept as a no-op shim so callers passing a `search_fn` continue
+to work. If you ever want to route searches through your own provider
+(Brave, Tavily, SerpAPI), implement it here and update `agents/base.py` to
+use a client-side tool definition instead of the server-side one.
+"""
+
 from typing import List, Dict
 
 
-def web_search(query: str, num_results: int = 5) -> List[Dict]:
-    """Search the web. Returns list of {title, url, snippet}."""
-    key = os.getenv("BRAVE_SEARCH_API_KEY")
-    if not key:
-        print(
-            f"  [WARN] BRAVE_SEARCH_API_KEY not set — skipping search for: {query!r}\n"
-            "         Set the key in .env or environment to enable live collection."
-        )
-        return []
-    return _brave_search(query, num_results, key)
-
-
-def _brave_search(query: str, n: int, key: str) -> List[Dict]:
-    resp = requests.get(
-        "https://api.search.brave.com/res/v1/web/search",
-        headers={"Accept": "application/json", "X-Subscription-Token": key},
-        params={"q": query, "count": n},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    results = resp.json().get("web", {}).get("results", [])
-    return [
-        {
-            "title": r.get("title", ""),
-            "url": r.get("url", ""),
-            "snippet": r.get("description", ""),
-        }
-        for r in results
-    ]
+def web_search(query: str, num_results: int = 5) -> List[Dict]:  # noqa: ARG001
+    """No-op. Real search runs server-side inside Anthropic's web_search tool."""
+    return []

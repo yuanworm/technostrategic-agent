@@ -111,33 +111,46 @@ def collect(output_dir, model, config):
         title="Jargon Mining"
     ))
 
-    result = {
-        "metadata": {
-            "target": target,
-            "stage": "collect",
-            "model": model_,
-            "started_at": _now(),
-            "lead_a_status": thesis.get("lead_a_status", "STUBBED"),
-        }
-    }
+    out_path = out_dir / cfg.COLLECTED_FILE
 
-    console.print("\n[bold cyan]Running Function Collector...[/bold cyan]")
-    func_output = run_function_collector(thesis, model_, web_search)
-    result["function"] = {"raw_output": func_output, "timestamp": _now()}
-    console.print("  [green]Function collector complete.[/green]")
+    # Resume support: if a prior run partially completed, pick up where it left off.
+    if out_path.exists():
+        result = _read_json(out_path)
+        done = [k for k in ("function", "vertical", "culture") if k in result]
+        if done:
+            console.print(
+                f"  [yellow]Resuming:[/yellow] found existing {out_path} "
+                f"with {', '.join(done)} already done."
+            )
+    else:
+        result = {}
 
-    console.print("\n[bold cyan]Running Vertical Collector...[/bold cyan]")
-    vert_output = run_vertical_collector(thesis, model_, web_search)
-    result["vertical"] = {"raw_output": vert_output, "timestamp": _now()}
-    console.print("  [green]Vertical collector complete.[/green]")
+    result.setdefault("metadata", {
+        "target": target,
+        "stage": "collect",
+        "model": model_,
+        "started_at": _now(),
+        "lead_a_status": thesis.get("lead_a_status", "STUBBED"),
+    })
 
-    console.print("\n[bold cyan]Running Culture Collector...[/bold cyan]")
-    cult_output = run_culture_collector(thesis, model_, web_search)
-    result["culture"] = {"raw_output": cult_output, "timestamp": _now()}
-    console.print("  [green]Culture collector complete.[/green]")
+    stages = [
+        ("function", "Function Collector", run_function_collector),
+        ("vertical", "Vertical Collector", run_vertical_collector),
+        ("culture",  "Culture Collector",  run_culture_collector),
+    ]
+
+    for key, label, runner in stages:
+        if key in result and result[key].get("raw_output"):
+            console.print(f"\n[dim]Skipping {label} (already in {out_path.name}).[/dim]")
+            continue
+        console.print(f"\n[bold cyan]Running {label}...[/bold cyan]")
+        output = runner(thesis, model_, web_search)
+        result[key] = {"raw_output": output, "timestamp": _now()}
+        # Write after each collector so partial progress is never lost.
+        _write_json(out_path, result)
+        console.print(f"  [green]{label} complete.[/green]")
 
     result["metadata"]["completed_at"] = _now()
-    out_path = out_dir / cfg.COLLECTED_FILE
     _write_json(out_path, result)
 
     console.print(Panel(

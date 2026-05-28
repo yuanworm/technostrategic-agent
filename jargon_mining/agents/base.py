@@ -1,50 +1,38 @@
-"""Shared agentic loop: system prompt + tool use for web_search → text output."""
+"""Shared agentic loop: system prompt + Anthropic server-side web_search → text output."""
 
-import json
-from typing import Callable, List, Dict
+import time
+from typing import Callable, List, Dict, Optional
 import anthropic
 
+# Anthropic's server-side web search tool. The model issues queries and Anthropic
+# executes the search on its infrastructure — no separate Brave/Tavily/etc. key.
 _WEB_SEARCH_TOOL = {
+    "type": "web_search_20250305",
     "name": "web_search",
-    "description": (
-        "Search the web for current information. Use targeted queries to find "
-        "job postings, forum threads, annual reports, practitioner blogs, regulatory "
-        "filings, and other primary sources. Make multiple searches with different "
-        "queries to cover the required source types."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "The search query string",
-            },
-            "num_results": {
-                "type": "integer",
-                "description": "Number of results to return (1–10)",
-                "default": 5,
-            },
-        },
-        "required": ["query"],
-    },
+    "max_uses": 30,
 }
 
-_MAX_ITERATIONS = 30
+_MAX_ITERATIONS = 40
+_MAX_RETRIES = 6
+_BASE_BACKOFF_S = 8
 
 
 def run_agent(
     system_prompt: str,
     user_message: str,
     model: str,
-    search_fn: Callable[[str, int], List[Dict]],
+    search_fn: Optional[Callable[[str, int], List[Dict]]] = None,
 ) -> str:
     """
-    Run an agentic loop with web_search tool access.
-    Returns the final text response from the model.
+    Run an agentic loop with Anthropic's server-side web search tool.
+
+    `search_fn` is accepted for backwards compatibility but ignored — the search
+    is executed by Anthropic, not by the caller.
     """
+    del search_fn
+
     client = anthropic.Anthropic()
 
-    # Use prompt caching on the (long, fixed) system prompt
     system = [
         {
             "type": "text",
@@ -55,8 +43,9 @@ def run_agent(
 
     messages = [{"role": "user", "content": user_message}]
 
-    for iteration in range(_MAX_ITERATIONS):
-        response = client.messages.create(
+    for _ in range(_MAX_ITERATIONS):
+        response = _create_with_retry(
+            client,
             model=model,
             max_tokens=8096,
             system=system,
@@ -64,40 +53,66 @@ def run_agent(
             messages=messages,
         )
 
+        for block in response.content:
+            if getattr(block, "type", None) == "server_tool_use":
+                query = getattr(block, "input", {}).get("query", "")
+                if query:
+                    print(f"    [search] {query!r}", flush=True)
+
         if response.stop_reason == "end_turn":
             return _extract_text(response)
 
-        if response.stop_reason == "tool_use":
-            tool_results = []
-            for block in response.content:
-                if block.type == "tool_use":
-                    query = block.input.get("query", "")
-                    n = block.input.get("num_results", 5)
-                    print(f"    [search] {query!r}")
-                    results = search_fn(query, n)
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": json.dumps(results),
-                        }
-                    )
-
-            messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
-        else:
-            # stop_reason is max_tokens or something unexpected
-            return _extract_text(response)
+        return _extract_text(response)
 
     raise RuntimeError(
-        f"Agent exceeded {_MAX_ITERATIONS} iterations without completing. "
-        "Check for a runaway tool-use loop."
+        f"Agent exceeded {_MAX_ITERATIONS} iterations without completing."
     )
+
+
+def _create_with_retry(client: anthropic.Anthropic, **kwargs):
+    """Call messages.create with exponential-backoff retry on 429/overload."""
+    for attempt in range(_MAX_RETRIES):
+        try:
+            return client.messages.create(**kwargs)
+        except anthropic.RateLimitError as e:
+            wait = _retry_after(e) or _BASE_BACKOFF_S * (2 ** attempt)
+            print(
+                f"    [rate-limit] {e.__class__.__name__}: waiting {wait}s "
+                f"(attempt {attempt + 1}/{_MAX_RETRIES})",
+                flush=True,
+            )
+            time.sleep(wait)
+        except anthropic.APIStatusError as e:
+            if getattr(e, "status_code", None) in (529, 503, 500):
+                wait = _BASE_BACKOFF_S * (2 ** attempt)
+                print(
+                    f"    [retry] {e.status_code} from API: waiting {wait}s "
+                    f"(attempt {attempt + 1}/{_MAX_RETRIES})",
+                    flush=True,
+                )
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError(f"Exceeded {_MAX_RETRIES} retries on Anthropic API.")
+
+
+def _retry_after(exc: anthropic.RateLimitError) -> Optional[int]:
+    """Read the Retry-After header if present, else None."""
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return None
+    val = resp.headers.get("retry-after") or resp.headers.get("anthropic-ratelimit-input-tokens-reset")
+    if not val:
+        return None
+    try:
+        return max(1, int(float(val)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _extract_text(response) -> str:
     parts = []
     for block in response.content:
-        if hasattr(block, "text"):
+        if getattr(block, "type", None) == "text":
             parts.append(block.text)
     return "\n".join(parts)
