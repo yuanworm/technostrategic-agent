@@ -99,12 +99,11 @@ def run_sense_maker(
 
     raw = run_agent(_SENSE_MAKER_SYSTEM, user_message, model)
 
-    # Strip any accidental markdown fences the model might add
+    # Strip any accidental markdown fences the model might add (``` or ```json etc.)
     cleaned = raw.strip()
     if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[1]
-        if cleaned.endswith("```"):
-            cleaned = cleaned.rsplit("```", 1)[0]
+        cleaned = cleaned.split("\n", 1)[1]  # drop the opening fence line
+        cleaned = cleaned.rsplit("```", 1)[0]  # drop the closing fence
         cleaned = cleaned.strip()
 
     try:
