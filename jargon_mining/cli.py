@@ -2,13 +2,11 @@
 Jargon Mining CLI — human-in-the-loop, one stage at a time.
 
 Stages (run in order):
-  collect  →  outputs/01_collected.json
-  sort     →  outputs/02_sorted.json
-  diverge  →  outputs/03_candidate_deleted_realities.md
-  run-all  →  all three, with human confirmation between stages
-
-# TODO (v2): add `sense-make` command that runs the Lead A Sense-Maker agent
-# (Prompt A from the prompt set) instead of reading from thesis_stub.json.
+  sense-make → config/thesis_sensemade.json   (Lead A — researches ICP thesis)
+  collect    → outputs/01_collected.json
+  sort       → outputs/02_sorted.json
+  diverge    → outputs/03_candidate_deleted_realities.md
+  run-all    → all three collect→sort→diverge stages, with human confirmation
 """
 
 import json
@@ -32,6 +30,7 @@ from jargon_mining.agents.collectors import (
 )
 from jargon_mining.agents.sorter import run_sorter
 from jargon_mining.agents.divergence import run_divergence_finder
+from jargon_mining.agents.sense_maker import run_sense_maker
 
 console = Console()
 
@@ -85,6 +84,79 @@ def _shared_options(fn):
 def cli():
     """Jargon Mining Agent System — collect → sort → diverge."""
     pass
+
+
+# ---------------------------------------------------------------------------
+# sense-make (Lead A)
+# ---------------------------------------------------------------------------
+
+@cli.command("sense-make")
+@click.option("--company", "-C", required=True, help="Company / seller name (e.g. 'Singtel DICo')")
+@click.option("--product", "-p", required=True, help="Product description (e.g. 'RE:AI (AI/GPUaaS)')")
+@click.option("--market",  "-M", required=True, help="Target market (e.g. 'Japan')")
+@click.option("--brief",   "-b", default=None,  help="Path to a brief doc (.md/.txt) for extra context")
+@click.option("--output",  "-o", default=None,  help="Output path for thesis JSON (default: config/thesis_sensemade.json)")
+@click.option("--model",   "-m", default=None,  help="Claude model to use")
+def sense_make(company, product, market, brief, output, model):
+    """
+    Lead A: Research the ICP thesis for a given company/product/market.
+
+    Reads an optional brief file, searches the web, and writes a thesis JSON
+    that can be passed to `collect` via --config.
+
+    INVARIANT: Output is a PROPOSED thesis — review it before running collect.
+    The agent flags confidence levels per field and lists its sources.
+    """
+    model_ = cfg.get_model(model)
+    out_path = Path(output) if output else Path("config/thesis_sensemade.json")
+
+    brief_text = None
+    if brief:
+        brief_path = Path(brief)
+        if not brief_path.exists():
+            console.print(f"[red]Brief file not found:[/red] {brief_path}")
+            sys.exit(1)
+        brief_text = brief_path.read_text()
+
+    console.print(Panel(
+        f"[bold]Lead A: Sense-Make[/bold]\n"
+        f"Company: {company}\n"
+        f"Product: {product}\n"
+        f"Market:  {market}\n"
+        f"Brief:   {brief or '(none)'}\n"
+        f"Model:   {model_}\n"
+        f"Output:  {out_path}",
+        title="Jargon Mining — Sense-Maker"
+    ))
+
+    console.print("\n[bold cyan]Running Sense-Maker agent...[/bold cyan]")
+    console.print("  (searching for real buying committee, verticals, competitors)\n")
+
+    thesis = run_sense_maker(company, product, market, model_, brief_text)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
+        json.dump(thesis, f, indent=2, ensure_ascii=False)
+    console.print(f"  [green]Wrote:[/green] {out_path}")
+
+    # Surface key findings for quick human review
+    icp = thesis.get("icp", {})
+    confidence = thesis.get("lead_a_confidence", {})
+    console.print(Panel(
+        f"[bold]Proposed thesis — REVIEW BEFORE RUNNING COLLECT[/bold]\n\n"
+        f"Category:        {thesis.get('category', '?')}\n"
+        f"Target vertical: {thesis.get('target_vertical', '?')}  "
+        f"[confidence: {confidence.get('target_verticals', '?')}]\n"
+        f"Roles:           {', '.join(icp.get('roles', [])[:3])} ...  "
+        f"[confidence: {confidence.get('icp_roles', '?')}]\n"
+        f"Competitors:     {', '.join(thesis.get('competitor_frame', [])[:3])} ...  "
+        f"[confidence: {confidence.get('competitor_frame', '?')}]\n\n"
+        f"Thesis:\n{thesis.get('thesis', '?')}\n\n"
+        f"Sources used: {len(thesis.get('lead_a_sources', []))}\n\n"
+        f"[bold yellow]Next:[/bold yellow] review {out_path}, then:\n"
+        f"  python -m jargon_mining collect --config {out_path} --vertical <vertical>",
+        title="Sense-Maker output"
+    ))
 
 
 # ---------------------------------------------------------------------------
