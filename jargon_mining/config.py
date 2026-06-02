@@ -10,6 +10,7 @@ _DEFAULT_MODEL = "claude-opus-4-7"
 COLLECTED_FILE = "01_collected.json"
 SORTED_FILE = "02_sorted.json"
 DIVERGENCE_FILE = "03_candidate_deleted_realities.md"
+JARGON_AUDIT_TARGETS_FILE = "04_jargon_audit_targets.md"
 
 
 def load_thesis(config_path: str | None = None) -> dict:

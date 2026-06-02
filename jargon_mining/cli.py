@@ -130,29 +130,52 @@ def sense_make(company, product, market, brief, output, model):
     ))
 
     console.print("\n[bold cyan]Running Sense-Maker agent...[/bold cyan]")
-    console.print("  (searching for real buying committee, verticals, competitors)\n")
+    console.print("  (searching for buying committee, verticals, competitors + jargon audit)\n")
 
-    thesis = run_sense_maker(company, product, market, model_, brief_text)
+    thesis, jargon_audit = run_sense_maker(company, product, market, model_, brief_text)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(thesis, f, indent=2, ensure_ascii=False)
     console.print(f"  [green]Wrote:[/green] {out_path}")
 
+    # Write jargon audit #1 alongside the thesis
+    audit_path = out_path.parent / "jargon_audit_01_client.md"
+    if jargon_audit:
+        client = thesis.get("client", {})
+        header = (
+            f"# Jargon Audit — Client Product Category\n\n"
+            f"**Client:** {client.get('company', company)}  \n"
+            f"**Product category:** {client.get('product_category', product)}  \n"
+            f"**Market:** {thesis.get('targets', {}).get('market', market)}  \n\n"
+            "---\n\n"
+        )
+        _write_text(audit_path, header + jargon_audit)
+    else:
+        console.print("  [yellow]No jargon audit returned by agent.[/yellow]")
+
     # Surface key findings for quick human review
-    icp = thesis.get("icp", {})
+    targets = thesis.get("targets", {})
+    client = thesis.get("client", {})
     confidence = thesis.get("lead_a_confidence", {})
+    roles_preview = [r.get("title", r) if isinstance(r, dict) else r
+                     for r in targets.get("bgm_roles", [])[:3]]
+    verticals_preview = targets.get("verticals", [])[:3]
+
     console.print(Panel(
         f"[bold]Proposed thesis — REVIEW BEFORE RUNNING COLLECT[/bold]\n\n"
-        f"Category:        {thesis.get('category', '?')}\n"
-        f"Target vertical: {thesis.get('target_vertical', '?')}  "
+        f"Client:          {client.get('company', '?')} ({client.get('vertical', '?')})\n"
+        f"Product:         {client.get('product_category', '?')}\n"
+        f"Target market:   {targets.get('market', '?')}\n"
+        f"Top BGM roles:   {', '.join(roles_preview)}  "
+        f"[confidence: {confidence.get('bgm_roles', '?')}]\n"
+        f"Top verticals:   {', '.join(verticals_preview)}  "
         f"[confidence: {confidence.get('target_verticals', '?')}]\n"
-        f"Roles:           {', '.join(icp.get('roles', [])[:3])} ...  "
-        f"[confidence: {confidence.get('icp_roles', '?')}]\n"
-        f"Competitors:     {', '.join(thesis.get('competitor_frame', [])[:3])} ...  "
+        f"Competitors:     {', '.join(thesis.get('competitors', [])[:3])}  "
         f"[confidence: {confidence.get('competitor_frame', '?')}]\n\n"
         f"Thesis:\n{thesis.get('thesis', '?')}\n\n"
-        f"Sources used: {len(thesis.get('lead_a_sources', []))}\n\n"
+        f"Sources used: {len(thesis.get('lead_a_sources', []))}\n"
+        f"Jargon audit: {audit_path}\n\n"
         f"[bold yellow]Next:[/bold yellow] review {out_path}, then:\n"
         f"  python -m jargon_mining collect --config {out_path} --vertical <vertical>",
         title="Sense-Maker output"
@@ -306,10 +329,11 @@ def sort(output_dir, model, config, vertical):  # noqa: ARG001 (vertical unused 
 @_shared_options
 def diverge(output_dir, model, config, vertical):  # noqa: ARG001 (vertical unused in diverge)
     """
-    Stage 3: Find formal↔unguarded divergences — candidate deleted realities.
+    Stage 3: Find formal↔unguarded divergences — candidate deleted realities + jargon audit.
 
     Reads:  outputs/02_sorted.json
     Writes: outputs/03_candidate_deleted_realities.md
+            outputs/04_jargon_audit_targets.md
 
     INVARIANT: ALL candidate divergences are surfaced, including [UNEXPECTED] ones
     that contradict Lead A's thesis. The system stops here — it does not pick the winner.
@@ -321,49 +345,71 @@ def diverge(output_dir, model, config, vertical):  # noqa: ARG001 (vertical unus
 
     in_path = out_dir / cfg.SORTED_FILE
     out_path = out_dir / cfg.DIVERGENCE_FILE
+    audit_path = out_dir / cfg.JARGON_AUDIT_TARGETS_FILE
 
     console.print(Panel(
         f"[bold]Stage 3: Diverge[/bold]\n"
         f"Reading: {in_path}\n"
         f"Model: {model_}\n"
-        f"Output: {out_path}",
+        f"Outputs: {out_path}\n"
+        f"         {audit_path}",
         title="Jargon Mining"
     ))
 
     sorted_data = _read_json(in_path)
-
-    # Pass collected phrases so divergence finder can surface real source citations.
     collected_path = out_dir / cfg.COLLECTED_FILE
     collected_data = _read_json(collected_path) if collected_path.exists() else None
 
     console.print("\n[bold cyan]Running Divergence Finder...[/bold cyan]")
-    divergence_md = run_divergence_finder(sorted_data, thesis, model_, web_search, collected_data)
+    deleted_realities_md, jargon_audit_md = run_divergence_finder(
+        sorted_data, thesis, model_, web_search, collected_data
+    )
+
+    # Derive target description from thesis (supports both old and new schema)
+    client = thesis.get("client", {})
+    targets = thesis.get("targets", {})
+    company = client.get("company") or thesis.get("target_company", "")
+    category = client.get("product_category") or thesis.get("category", "")
+    market = targets.get("market") or thesis.get("market", "")
 
     header = (
         f"# Candidate Deleted Realities\n\n"
-        f"**Target:** {thesis['target_company']} × {thesis['category']} × {thesis['market']}  \n"
+        f"**Client:** {company}  \n"
+        f"**Category:** {category}  \n"
+        f"**Market:** {market}  \n"
         f"**Generated:** {_now()}  \n"
         f"**Lead A status:** {thesis.get('lead_a_status', 'STUBBED')}  \n\n"
         "---\n\n"
-        "> **Pipeline stop.** This document is the end of the automated pipeline.  \n"
-        "> **Step 4** (human): cultural read + operative deleted-reality call.  \n"
-        "> **Step 5** (human): write Pierce hypotheses from the chosen deleted reality.  \n\n"
+        "> **Pipeline stop.** Steps 4 and 5 are human-only.  \n"
+        "> **Step 4:** Cultural read + operative deleted-reality call.  \n"
+        "> **Step 5:** Write Pierce hypotheses from the chosen deleted reality.  \n\n"
         "---\n\n"
     )
+    _write_text(out_path, header + deleted_realities_md)
 
-    _write_text(out_path, header + divergence_md)
+    if jargon_audit_md:
+        audit_header = (
+            f"# Jargon Audit — Target Verticals\n\n"
+            f"**Client:** {company}  \n"
+            f"**Market:** {market}  \n"
+            f"**Generated:** {_now()}  \n\n"
+            "---\n\n"
+        )
+        _write_text(audit_path, audit_header + jargon_audit_md)
+    else:
+        console.print("  [yellow]No target jargon audit returned by agent.[/yellow]")
 
     console.print(Panel(
         f"[green]Stage 3 complete. Pipeline stop.[/green]\n\n"
-        f"The candidate deleted realities are in:\n{out_path}\n\n"
+        f"Deleted realities: {out_path}\n"
+        f"Jargon audit:      {audit_path}\n\n"
         "[bold]Step 4 is yours (human):[/bold]\n"
-        "1. Go through every [HUMAN-READ] flag (culture axis) and decide which terms\n"
-        "   actually carry weight in the specific SEA market.\n"
-        "2. From the candidates, pick the operative deleted reality — the one a buyer\n"
-        "   feels but the lexicon has erased. Note any [UNEXPECTED] divergences seriously.\n\n"
+        "1. Review [HUMAN-READ] flags (culture axis)\n"
+        "2. Pick the operative deleted reality — the one a buyer feels but the lexicon erased\n"
+        "3. Note any [UNEXPECTED] divergences seriously\n\n"
         "[bold]Step 5 is yours (human):[/bold]\n"
-        "Turn the chosen deleted reality into 2–3 testable Pierce lines:\n"
-        '  "You\'re running [formal phrase] — [pierce: the deleted reality named]?"',
+        "Turn the chosen deleted reality into 2–3 Pierce lines:\n"
+        '  "You\'re running [formal phrase] — [pierce: the deleted reality]?"',
         title="Human handoff"
     ))
 
