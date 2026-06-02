@@ -6,6 +6,10 @@ venv/
 .env
 .DS_Store
 
-# Run artifacts — keep the top-level dir, ignore everything in it
+# Run artifacts — keep the top-level dir and named run subdirs, ignore loose files
 outputs/**
 !outputs/.gitkeep
+!outputs/*/
+outputs/*/**.json
+!outputs/*/03_candidate_deleted_realities.md
+!outputs/*/04_jargon_audit_targets.md
