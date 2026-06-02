@@ -99,18 +99,21 @@ def run_sense_maker(
 
     raw = run_agent(_SENSE_MAKER_SYSTEM, user_message, model)
 
-    # Strip any accidental markdown fences the model might add (``` or ```json etc.)
-    cleaned = raw.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[1]  # drop the opening fence line
-        cleaned = cleaned.rsplit("```", 1)[0]  # drop the closing fence
-        cleaned = cleaned.strip()
+    # The agent may write research notes before/after the JSON. Extract the
+    # outermost JSON object by finding the first '{' and its matching '}'.
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError(
+            f"Sense-Maker output contains no JSON object.\nRaw output:\n{raw}"
+        )
+    cleaned = raw[start : end + 1].strip()
 
     try:
         thesis = json.loads(cleaned)
     except json.JSONDecodeError as e:
         raise ValueError(
-            f"Sense-Maker returned invalid JSON.\nError: {e}\nRaw output:\n{raw}"
+            f"Sense-Maker returned invalid JSON.\nError: {e}\nExtracted:\n{cleaned}"
         ) from e
 
     # Ensure required fields are present with sensible defaults
