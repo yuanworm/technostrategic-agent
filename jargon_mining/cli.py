@@ -39,6 +39,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _target_label(thesis: dict) -> str:
+    client = thesis.get("client", {})
+    targets = thesis.get("targets", {})
+    company = client.get("company") or thesis.get("target_company", "?")
+    category = client.get("product_category") or thesis.get("category", "?")
+    market = targets.get("market") or thesis.get("market", "?")
+    return f"{company} × {category} × {market}"
+
+
 def _write_json(path: Path, data: dict) -> None:
     with open(path, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -202,7 +211,7 @@ def collect(output_dir, model, config, vertical):
         thesis["target_vertical"] = vertical
     out_dir = cfg.resolve_output_dir(output_dir)
     model_ = cfg.get_model(model)
-    target = f"{thesis['target_company']} × {thesis['category']} × {thesis['market']}"
+    target = _target_label(thesis)
 
     console.print(Panel(
         f"[bold]Stage 1: Collect[/bold]\n"
@@ -428,7 +437,7 @@ def run_all(output_dir, model, config, vertical):
     """
     thesis = cfg.load_thesis(config)
     out_dir = cfg.resolve_output_dir(output_dir)
-    target = f"{thesis['target_company']} × {thesis['category']} × {thesis['market']}"
+    target = _target_label(thesis)
 
     console.print(Panel(
         f"[bold]Full pipeline: collect → sort → diverge[/bold]\n"

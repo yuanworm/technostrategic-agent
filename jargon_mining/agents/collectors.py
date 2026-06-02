@@ -11,32 +11,32 @@ from typing import Callable, List, Dict
 from jargon_mining.agents.base import run_agent
 
 # ---------------------------------------------------------------------------
-# SYSTEM PROMPTS (verbatim from jargon-mining-prompt-set-v1.md)
+# SYSTEM PROMPTS
 # ---------------------------------------------------------------------------
 
 _FUNCTION_SYSTEM = """\
 You are a research sub-agent. Do NOT analyze, sort, or interpret. Collect only.
 
-TARGET ROLES: the buying committee for a CPaaS / communications-API purchase at a
-mid-to-large company operating across Southeast Asia. Likely roles: VP/Head of
-Engineering, CTO, Head of Platform/Infrastructure, Head of Customer Communications
-or CX, IT Director, and a procurement/compliance stakeholder.
+TARGET ROLES: the buying committee for a technology/infrastructure purchase at an
+enterprise. You will be given specific roles, market, and product category via the
+user message.
 
 Collect language in TWO registers and keep them separate:
 
 FORMAL REGISTER (how these roles describe their work publicly/defensibly):
-- Pull from: current job postings for these exact roles at SEA tech/logistics/fintech
-  companies; relevant certification or platform-vendor terminology; conference talk titles
-  aimed at these roles.
+- Pull from: current job postings for these exact roles at companies in the target market;
+  relevant certification or platform-vendor terminology; conference talk titles aimed at
+  these roles; analyst reports and industry association language for this product category.
 - Output: a list of recurring phrases, acronyms, and stock terms. Verbatim where possible.
 
 UNGUARDED REGISTER (how these roles talk to peers, off-stage):
 - Pull from: practitioner forums and communities (developer forums, infra/SRE communities,
-  r/sysadmin / r/devops style spaces), Q&A threads, practitioner blog posts where people
-  describe actual day-to-day pain with messaging/comms infrastructure.
+  Reddit-style spaces), Q&A threads, practitioner blog posts where people describe actual
+  day-to-day pain with this type of infrastructure.
 - Output: a list of phrases describing real problems, frustrations, and fears. Verbatim.
 
-For every phrase, cite the source type. Do not editorialize. Two columns: FORMAL | UNGUARDED.
+For every phrase, cite the source type AND source name. Do not editorialize.
+Two columns: FORMAL | UNGUARDED.
 
 Use the web_search tool extensively to find real, current, verbatim language from these
 sources. Make many targeted searches across different source types (job boards, Reddit,
@@ -79,36 +79,74 @@ CPaaS vendors' marketing — search for the buyer's industry perspective.
 """
 
 _CULTURE_SYSTEM = """\
-You are a research sub-agent for the SOUTHEAST ASIA context layer. Collect, and FLAG
+You are a research sub-agent for the CULTURE/GEOGRAPHY context layer. Collect, and FLAG
 where you are uncertain — do NOT assume a phrase carries emotional weight; that judgment
-belongs to a human reviewer who knows the region.
+belongs to a human reviewer who knows the market.
 
-CONTEXT: buying committees at SEA companies (Singapore, Indonesia, Malaysia, Vietnam,
-Philippines, Thailand) purchasing CPaaS / messaging infrastructure.
+You will be given the target market and buying committee roles via the user message.
 
 Collect in TWO registers, kept separate:
 
 FORMAL REGISTER:
-- Pull from: regional regulator language on messaging/data/telecom (e.g. Singapore IMDA &
-  PDPC, Indonesia Kominfo, Malaysia MCMC); SEA-specific job postings for the Prompt-1 roles
-  vs. their global-HQ equivalents (capture the DELTA between local and global phrasing);
-  local-market compliance terminology.
+- Pull from: regional regulator and government language on technology procurement and data
+  governance for this market; local job postings for the buying-committee roles vs. their
+  global-HQ equivalents (capture the DELTA between local and global phrasing); local-market
+  compliance and procurement terminology specific to this market.
 - Output: regulatory terms, local-market phrasings, the local-vs-global JD delta. Verbatim.
 
 UNGUARDED REGISTER:
-- Pull from: SEA business press; local-language tech/business media (note when a term is
-  in a local language); employer-review sites for how people describe working inside SEA
-  firms (hierarchy, formality, decision norms).
+- Pull from: local business press; local-language tech/business media (note when a term is
+  in a local language); employer-review sites, practitioner forums, and community discussions
+  describing how people actually navigate decisions and hierarchy inside firms in this market.
 - Output: phrases capturing local corporate-hierarchy, formality, and market-specific
   anxiety. Verbatim. Mark anything you suspect is culturally loaded with [HUMAN-READ].
 
 Two columns: FORMAL | UNGUARDED. Heavy [HUMAN-READ] flagging expected — that is correct.
 
-Use the web_search tool to find: IMDA/PDPC/Kominfo/MCMC regulatory announcements on
-messaging and data; SEA tech company job postings vs. global equivalents; Glassdoor/Blind
-reviews of SEA tech firms; local tech media (e.g. Tech in Asia, KrASIA, e27); Singaporean/
-Indonesian/Malaysian business press. Do not fabricate — cite real sources.
+Use the web_search tool extensively. Search for: government/regulator language on technology
+and data; local job postings vs global equivalents; local tech media; employer review sites;
+local business press. Do not fabricate — cite real sources with publication names.
 """
+
+# ---------------------------------------------------------------------------
+# Schema helpers
+# ---------------------------------------------------------------------------
+
+def _extract(thesis: dict) -> dict:
+    """Return normalised fields from either old (flat) or new (client/targets) schema."""
+    client = thesis.get("client", {})
+    targets = thesis.get("targets", {})
+    if client:
+        company = client.get("company", "")
+        category = client.get("product_category", "")
+        market = targets.get("market", "")
+        bgm_roles = targets.get("bgm_roles", [])
+        roles = [r["title"] if isinstance(r, dict) else r for r in bgm_roles]
+        verticals = targets.get("verticals", [])
+        use_cases = targets.get("use_cases", [])
+        company_size = targets.get("company_size", "")
+        culture = targets.get("culture", {})
+    else:
+        company = thesis.get("target_company", "")
+        category = thesis.get("category", "")
+        market = thesis.get("market", "")
+        icp = thesis.get("icp", {})
+        roles = icp.get("roles", [])
+        verticals = icp.get("verticals", [])
+        use_cases = icp.get("use_cases", [])
+        company_size = icp.get("company_size", "")
+        culture = {}
+    return {
+        "company": company,
+        "category": category,
+        "market": market,
+        "roles": roles,
+        "verticals": verticals,
+        "use_cases": use_cases,
+        "company_size": company_size,
+        "culture": culture,
+    }
+
 
 # ---------------------------------------------------------------------------
 # Collector runners
@@ -120,20 +158,21 @@ def run_function_collector(
     model: str,
     search_fn: Callable[[str, int], List[Dict]],
 ) -> str:
-    roles = ", ".join(thesis["icp"]["roles"])
-    markets = thesis["market"]
-    company = thesis["target_company"]
-    category = thesis["category"]
+    f = _extract(thesis)
 
     user_message = (
         f"Target account context:\n"
-        f"- Company under analysis: {company} ({category})\n"
-        f"- Market: {markets}\n"
-        f"- Buying committee roles to research: {roles}\n"
-        f"- ICP verticals: {', '.join(thesis['icp']['verticals'])}\n\n"
+        f"- Seller / client: {f['company']}\n"
+        f"- Product category (what the buyer is purchasing): {f['category']}\n"
+        f"- Market: {f['market']}\n"
+        f"- Account profile: {f['company_size']}\n"
+        f"- Buying committee roles to research: {', '.join(f['roles'])}\n"
+        f"- Target buyer verticals: {', '.join(f['verticals'][:3])}\n\n"
         "Search extensively across the source types listed in your instructions. "
+        "Find real language from job postings, practitioner forums, and community discussions "
+        f"in the {f['market']} market. "
         "Aim for at least 20 phrases per register, covering multiple source types. "
-        "Every phrase must carry a source citation."
+        "Every phrase must carry a source name and source type."
     )
 
     return run_agent(_FUNCTION_SYSTEM, user_message, model, search_fn)
@@ -144,23 +183,25 @@ def run_vertical_collector(
     model: str,
     search_fn: Callable[[str, int], List[Dict]],
 ) -> str:
-    vertical = thesis.get("target_vertical", "fintech")
+    f = _extract(thesis)
+
+    # target_vertical can be overridden via CLI --vertical flag (set on the thesis dict)
+    vertical = thesis.get("target_vertical") or (f["verticals"][0] if f["verticals"] else "enterprise")
     vertical_desc = thesis.get(
         "vertical_description",
-        f"Companies in the {vertical} industry that send high-volume customer communications.",
+        f"Companies in the {vertical} industry.",
     )
-    market = thesis["market"]
-    use_cases = ", ".join(thesis["icp"]["use_cases"])
+    use_cases_str = ", ".join(f["use_cases"][:5]) if f["use_cases"] else "AI compute, data processing"
 
     user_message = (
-        f"Target vertical: {vertical.upper()}\n\n"
+        f"Target vertical: {vertical}\n\n"
         f"Vertical description: {vertical_desc}\n\n"
-        f"Market context: {market}\n"
-        f"Key communications use cases in this vertical: {use_cases}\n\n"
-        f"Research extensively how {vertical} companies describe their communications needs "
-        f"and pain — in their OWN words, from their OWN perspective as buyers. "
-        f"Search annual reports, regulator filings, engineering blogs, and practitioner "
-        f"forums from the {vertical} industry. Do NOT collect from CPaaS vendors' marketing. "
+        f"Market context: {f['market']}\n"
+        f"Key use cases for this product ({f['category']}) in this vertical: {use_cases_str}\n\n"
+        f"Research how companies IN the {vertical} vertical describe their needs and pain "
+        f"for {f['category']} — in their OWN words, from their OWN perspective as buyers. "
+        "Search annual reports, regulator filings, engineering blogs, and practitioner "
+        f"forums from the {vertical} industry. Do NOT collect vendor marketing language. "
         "Aim for at least 20 phrases per register. Every phrase must carry a source citation."
     )
 
@@ -172,17 +213,31 @@ def run_culture_collector(
     model: str,
     search_fn: Callable[[str, int], List[Dict]],
 ) -> str:
-    markets = thesis["market"]
-    roles = ", ".join(thesis["icp"]["roles"])
+    f = _extract(thesis)
+    culture = f["culture"]
+    culture_notes = ""
+    if culture:
+        norms = culture.get("key_norms", [])
+        lang = culture.get("language_notes", "")
+        hier = culture.get("hierarchy_notes", "")
+        if norms:
+            culture_notes += f"Known cultural norms (from Lead A thesis — verify/extend):\n"
+            culture_notes += "\n".join(f"  - {n}" for n in norms[:3]) + "\n"
+        if lang:
+            culture_notes += f"Language notes: {lang[:200]}\n"
+        if hier:
+            culture_notes += f"Hierarchy notes: {hier[:200]}\n"
 
     user_message = (
         f"Target account context:\n"
-        f"- Market: {markets}\n"
-        f"- Buying committee roles: {roles}\n"
-        f"- Company type: {', '.join(thesis['icp']['verticals'])}\n\n"
-        "Search for SEA regulatory language, local job posting deltas, and "
-        "practitioner accounts of working inside SEA tech firms. Cover Singapore, "
-        "Indonesia, Malaysia, Vietnam, Philippines, and Thailand where possible. "
+        f"- Market: {f['market']}\n"
+        f"- Product category: {f['category']}\n"
+        f"- Buying committee roles: {', '.join(f['roles'][:5])}\n"
+        f"- Buyer verticals: {', '.join(f['verticals'][:3])}\n\n"
+        f"{culture_notes}\n"
+        f"Search for {f['market']} regulatory language on technology procurement and data "
+        f"governance; local job posting language for these roles vs. global equivalents; "
+        f"practitioner accounts of working inside firms in {f['market']}. "
         "Flag all culturally loaded terms [HUMAN-READ]. Aim for at least 15 phrases "
         "per register. Every phrase must carry a source citation."
     )
