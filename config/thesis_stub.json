@@ -1,0 +1,39 @@
+{
+  "target_company": "8x8",
+  "category": "CPaaS / UCaaS",
+  "market": "Southeast Asia (SEA)",
+  "icp": {
+    "description": "Buying committee roles at mid-to-large SEA companies running multi-market customer communications on CPaaS",
+    "verticals": ["fintech", "logistics", "e-commerce", "super-apps", "digital banking"],
+    "roles": [
+      "VP/Head of Engineering",
+      "CTO",
+      "Head of Platform/Infrastructure",
+      "Head of Customer Communications or CX",
+      "IT Director",
+      "Procurement/Compliance stakeholder"
+    ],
+    "company_size": "Mid-to-large (500+ employees), operating across 3+ SEA markets",
+    "use_cases": ["OTP / one-time passwords", "transactional alerts", "customer notifications", "2FA", "marketing messages"]
+  },
+  "competitor_frame": [
+    "Twilio",
+    "Vonage (Ericsson)",
+    "Sinch",
+    "MessageBird / Bird",
+    "Infobip",
+    "M800",
+    "Telnyx",
+    "Regional telco CPaaS arms (e.g. Singtel, AIS, Axiata)"
+  ],
+  "thesis": "The primary ICP is the buying committee at mid-to-large SEA companies (fintech, logistics, e-commerce) running high-volume customer communications (OTP, alerts, notifications) across 3+ SEA markets. They evaluate CPaaS on reliability, deliverability, regulatory compliance, and multi-market routing — not on unified-comms features. The engineering lead drives the shortlist; procurement/compliance co-signs on data residency and telco licensing; the CX/comms lead confirms channel coverage.",
+  "what_would_prove_this_wrong": [
+    "If the dominant buying motion is UCaaS/contact-center (not CPaaS API), the ICP shifts to ops/CX leadership, not engineering — and the competitor frame shifts to Zoom, RingCentral, Genesys",
+    "If 8x8 wins in SEA primarily through its contact-center bundle rather than standalone CPaaS, the category framing is wrong",
+    "If deliverability/OTP reliability is a commodity concern and buyers actually care more about cost arbitrage or developer experience, the deleted reality is different",
+    "If the real gating factor is not deliverability but regulatory/data-residency compliance, the ICP and pain map shifts to compliance/legal"
+  ],
+  "target_vertical": "fintech",
+  "vertical_description": "Digital banks, payment companies, lending platforms, and insurance tech companies operating across SEA. These companies rely heavily on customer communications for core product flows: OTP for login and transactions, fraud alerts, account balance notifications, KYC verification steps, loan disbursement confirmations. Regulatory requirements (MAS, OJK, BSP) often mandate specific notification formats and audit trails. A failed OTP or missed fraud alert is not a UX inconvenience — it is a compliance event or a direct revenue loss.",
+  "lead_a_status": "STUBBED — human-supplied for v1. Build Sense-Maker agent in v2 (see TODO in cli.py)."
+}

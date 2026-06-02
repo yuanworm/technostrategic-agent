@@ -1,0 +1,132 @@
+{
+  "client": {
+    "company": "Singtel Digital InfraCo (DICo)",
+    "vertical": "Telecommunications / Digital Infrastructure",
+    "product": "RE:AI",
+    "product_category": "AI Cloud / GPU-as-a-Service (GPUaaS) — how enterprise buyers in Japan categorise this is 'AIクラウド' (AI Cloud) or 'GPU クラウド' (GPU Cloud), often framed as AI computing infrastructure under the broader DX (デジタルトランスフォーメーション) budget line"
+  },
+  "targets": {
+    "market": "Japan (enterprise, B2B)",
+    "bgm_roles": [
+      {
+        "title": "CIO / 最高情報責任者 (CIO) or 情報システム部長 (Head of IT Systems Dept)",
+        "function": "IT / Information Systems",
+        "influence": "primary"
+      },
+      {
+        "title": "DX推進部長 / DX推進担当役員 (Head / Executive Officer of DX Promotion Dept)",
+        "function": "Digital Transformation / Strategy",
+        "influence": "primary"
+      },
+      {
+        "title": "CAIO / AIセンター長 (Chief AI Officer / Head of AI Centre)",
+        "function": "AI / Data Science",
+        "influence": "primary"
+      },
+      {
+        "title": "情報システム部 課長・係長 (Section Chief / Unit Chief, IT Systems Dept — kachō/kakarichō)",
+        "function": "IT Operations / Infrastructure",
+        "influence": "gatekeeper"
+      },
+      {
+        "title": "経営企画部長 (Head of Corporate Planning / Strategy)",
+        "function": "Corporate Planning / Finance",
+        "influence": "secondary"
+      },
+      {
+        "title": "CFO / 財務部長 (CFO / Head of Finance)",
+        "function": "Finance",
+        "influence": "gatekeeper"
+      },
+      {
+        "title": "法務・コンプライアンス担当 (Legal / Compliance Officer)",
+        "function": "Legal / Risk / Compliance",
+        "influence": "gatekeeper"
+      }
+    ],
+    "verticals": [
+      "Manufacturing (製造業) — automotive, electronics, precision machinery; strong DX urgency and labour-shortage AI need",
+      "Financial Services / BFSI (金融・保険) — banks, insurers; heavy compliance and data-sovereignty constraints create GPUaaS demand",
+      "Telecommunications / IT Services — NTT Group subsidiaries, SoftBank affiliates, KDDI group companies building internal AI products",
+      "Healthcare / Life Sciences (医療・製薬) — AI-driven diagnostics, drug discovery; GPU-intensive inference workloads",
+      "Retail / E-commerce (流通・小売) — demand forecasting, recommendation engines, generative AI for customer engagement",
+      "Automotive (自動車) — physical AI, autonomous driving simulation, robotics; major national AI strategy priority"
+    ],
+    "culture": {
+      "market": "Japan",
+      "key_norms": [
+        "Nemawashi (根回し): informal consensus-building with all affected stakeholders BEFORE formal proposal — sellers must invest in pre-meeting individual conversations with section chiefs, department heads, and executive officers; skipping this step causes rejection regardless of product merit",
+        "Ringi (稟議): formal bottom-up approval process where a written proposal (ringisho) circulates through multiple organisational layers collecting hanko (approval seals); expect 6–18 months for large infrastructure deals at enterprises with 500+ employees",
+        "Risk aversion and shared accountability: no single decision-maker will sign off alone; the ringi system distributes responsibility, so all objections must be resolved before formal circulation",
+        "DX framing is mandatory: all AI/GPUaaS pitches must be positioned as 'DX acceleration' or 'AX (AI Transformation)' — this is the budget and executive language; raw GPU compute framing alone will not resonate",
+        "Proof-of-concept (PoC / 実証実験) culture: Japanese enterprises strongly prefer a small, time-limited PoC before any commitment; build the PoC pathway into the sales motion from first contact",
+        "Local language and Japanese-language AI support: 64.7% of Japanese enterprise AI tool evaluators prioritise usability; Japanese-language support and localised documentation are non-negotiable requirements",
+        "Trust through existing relationships and ecosystem affiliations: the Singtel–Hitachi MOU is a direct trust signal; ecosystem affiliations (NVIDIA partnership, METI-supported programmes, Hitachi co-development) matter more than brand alone for a non-domestic player"
+      ],
+      "language_notes": "All materials and communications must be in Japanese (日本語). Decision documents (ringisho) must follow Japanese business writing conventions. English-only pitches are a disqualifier. Formal keigo (polite language) is expected in written communications. Avoid superlative marketing language ('world's best', 'revolutionary') — Japanese enterprise buyers prefer precise technical specifications, reference cases from named Japanese companies, and conservative performance claims. The term 'DX (デジタルトランスフォーメーション)' is the dominant framing; AI infrastructure positioned under the '2025 DX Cliff' urgency narrative (METI's 2018 warning about 12 trillion yen annual losses from legacy systems) is highly resonant.",
+      "hierarchy_notes": "Japanese organisations are hierarchical (seniority-based nenkōjōretsu system), but decisions are bottom-up via ringi — the initiating proposal typically comes from middle management (kachō 課長 or buchō 部長 level). Senior executives (torishimariyaku, jōmu) formally approve at the end but expect to have been briefed individually beforehand via nemawashi. Vendor sellers must map BOTH the formal hierarchy (for ringi routing) AND the informal influence network (section chiefs, senior technical staff who do vendor evaluation). For infrastructure deals, the IT systems section chief (情報システム部課長) is often the de facto gatekeeper who shapes the evaluation criteria. Executive officers with DX responsibility (DX推進担当役員) are increasingly empowered to sponsor AI initiatives directly, bypassing slower committee processes — these are high-value entry points."
+    },
+    "company_size": "Primary target: large Japanese enterprises (大企業) — Nikkei 225 constituents and their subsidiaries, plus top-tier non-listed companies — revenues ¥100B+ ($650M+), 1,000+ employees. Secondary target: mid-large enterprises (中堅企業) with active DX programmes, revenues ¥10B–¥100B, particularly in manufacturing, BFSI, and healthcare. Government-linked entities and public research institutes (RIKEN, AIST affiliates) are relevant for sovereign AI positioning but have longer procurement cycles.",
+    "use_cases": [
+      "LLM fine-tuning and training for Japanese-language enterprise models (e.g., internal knowledge bases, customer service bots in Japanese)",
+      "Generative AI application development and inference hosting — moving from PoC to production without on-premise GPU capex",
+      "Manufacturing AI — quality control computer vision, predictive maintenance, digital twin simulation (GPU-intensive inference at the edge or via burst cloud)",
+      "Financial services — risk modelling, fraud detection, regulatory reporting automation using GPU-accelerated analytics",
+      "Drug discovery / genomics — protein folding, molecular simulation requiring HPC-grade GPU clusters",
+      "Sovereign/private AI infrastructure — enterprises needing data residency within Japan and APPI-compliant AI compute, unable to use US-headquartered hyperscalers for sensitive workloads",
+      "AI agent development and deployment — enterprise AI agents for HR, accounting, customer service (rapidly growing use case per Japan's 2026 CIO landscape)",
+      "Burst compute for training runs — enterprises with on-premise inference who need cloud GPU bursting for model training phases without CapEx commitment"
+    ]
+  },
+  "competitors": [
+    "SoftBank Corp. (ソフトバンク) — Japan's most aggressive domestic GPUaaS/AI infrastructure player; world's first NVIDIA DGX SuperPOD with B200 systems; 150 billion JPY AI computing investment; domestic trust advantage",
+    "SAKURA internet (さくらインターネット) — received ¥50.1B in METI subsidies; expanding to ~10,800 NVIDIA GPUs; strong sovereign/domestic positioning; favoured by public-sector and research customers",
+    "KDDI / IDC Frontier — NVIDIA HGX-based AI infrastructure; ELYZA LLM partnership; government-backed METI programme participant; existing large-enterprise relationships via telecom",
+    "GMO Internet Group — GMO GPU Cloud, Japan's first full-stack H200 GPU cloud; aggressive pricing; fast deployment for mid-market",
+    "NTT Communications / NTT DATA — incumbent enterprise IT relationships; 50MW Shiroi Data Center campus; deep government and financial sector relationships; sovereign cloud positioning with TEPCO JV",
+    "AWS Japan (Amazon) — 2.3 trillion yen ($15.24B) committed through 2027; largest installed enterprise base; primary hyperscaler challenger; not sovereign-compliant for APPI-sensitive workloads",
+    "Microsoft Azure Japan — $10B investment through 2029 with Sakura Internet and SoftBank co-deployment; in-country Copilot processing; 94% of Nikkei 225 already using M365",
+    "Google Cloud Japan — Tokyo and Osaka regions; strong AI/ML tooling; sovereign cloud positioning improving",
+    "Highreso / alt GPU Cloud — niche Japanese AI cloud specialists; METI-backed; GPU SOROBAN service targeting AI startups and research",
+    "Fujitsu (富士通) — domestic heavyweight; new GPU accelerator for AI; enterprise trust; government cloud relationships; competing on AI platform services"
+  ],
+  "thesis": "Japanese large enterprises (Nikkei 225 and tier-1 mid-cap) with active DX/AX mandates are seeking GPU compute infrastructure that delivers data sovereignty within Japan, reduces CapEx risk during the move from AI PoC to production, and can be trusted via an established ecosystem partnership — making Singtel DICo's RE:AI competitive specifically against US hyperscalers on sovereignty and against domestic telcos on APAC connectivity and NVIDIA-backed technical parity; the primary buying trigger is the 'DX cliff' urgency combined with Japan's AI Promotion Act (2025) compliance pressure, and the primary buying group spans the DX推進部長, CIO/IT systems head, and CAIO/AI centre lead, who must all achieve nemawashi consensus before a ringisho circulates to executive approval — meaning the sales cycle is 9–18 months and requires Japanese-language account-level engagement at 5+ stakeholder levels.",
+  "what_would_prove_this_wrong": [
+    "If Japanese enterprises overwhelmingly prefer to consolidate all AI infrastructure with a single US hyperscaler (AWS/Azure/Google) despite APPI/sovereignty concerns, rather than splitting workloads across a regional provider like RE:AI, the sovereign differentiation thesis collapses",
+    "If domestic telcos (SoftBank, KDDI, NTT) with deeper existing enterprise relationships and METI subsidy advantages win the GPUaaS market before RE:AI achieves meaningful Japan-based data centre presence (Nxera has no announced Japan DC as of mid-2024), the partner-dependent go-to-market via Hitachi alone may be insufficient",
+    "If Japan's corporate AI adoption remains structurally slow — currently 54.9% of AI-implementing companies report results below expectations, and only ~25.8% use generative AI — demand for enterprise GPUaaS could mature more slowly than the thesis assumes, extending sales cycles beyond 18 months and reducing the addressable pipeline",
+    "If RE:AI cannot differentiate on price against H100/H200 hourly rates that have dropped from $8.00/hr to $2.85–3.50/hr (2024–2025) and GMO GPU Cloud's competitive $2.00/hr entry pricing, the thesis that buyers will pay a premium for sovereignty and connectivity is falsified",
+    "If the Singtel–Hitachi MOU does not convert into a formal distribution/resale agreement with Hitachi's enterprise customer base, the ecosystem trust signal is symbolic rather than commercially functional in Japan"
+  ],
+  "lead_a_status": "GENERATED",
+  "lead_a_sources": [
+    "re-ai.ai/newsroom (Singtel DICo product page)",
+    "datacenterdynamics.com — Singtel/Hitachi MOU coverage, Aug 2024",
+    "hitachi.com/cnews/2024/08 — Official Hitachi press release",
+    "grandviewresearch.com — Japan GPU-as-a-Service Market, 2025",
+    "mordorintelligence.com — Japan Data Center GPU Market Report 2026",
+    "idc.com — Japan AI Infrastructure and Services 2026: Shift Driven by Inference",
+    "rcrwireless.com — Telecom GPU-as-a-Service: Beyond the Hype (Analyst Angle), Oct 2025",
+    "nvidianews.nvidia.com — Japan Cloud Leaders Build NVIDIA AI Infrastructure, Nov 2024",
+    "forrester.com — From DX Fatigue to AI Transformation Urgency: Japan's Second Digital Awakening",
+    "cio.com — Reading the 2026 IT Landscape: Insights from Japan's Leading CIOs",
+    "introl.com — Japan $135B AI Push: Quantum + GPU Infrastructure",
+    "introl.com — Japan's $26 Billion Data Center Paradox",
+    "nihonium.io — Hierarchy vs Consensus in Japan; How Japanese Middle Managers Make Decisions",
+    "tokhimo.com — Understanding Nemawashi and Ringi System",
+    "arakiplaw.com — Global AI Regulatory and Policy Developments: 2025 Update",
+    "digital.nemko.com — AI Regulation Japan 2025",
+    "gmo-research.ai — Japan Generative AI Market Penetration and Business Adoption Trends 2025",
+    "trade.gov — Japan Cloud Computing Country Commercial Guide",
+    "matrixbcg.com — Competitive Landscape of SAKURA Internet",
+    "gmicloud.ai — Best GPU Cloud Providers in Japan & APAC",
+    "mckinsey.com — Sovereign AI: Building Ecosystems for Strategic Resilience"
+  ],
+  "lead_a_confidence": {
+    "bgm_roles": "HIGH",
+    "competitor_frame": "HIGH",
+    "target_verticals": "HIGH",
+    "culture": "HIGH",
+    "thesis": "MEDIUM"
+  }
+}
